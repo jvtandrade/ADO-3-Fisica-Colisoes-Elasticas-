@@ -4,7 +4,7 @@ Opção A: Colisões elásticas unidimensionais (tema: Pêndulo de Newton)
 Grupo: Maria Clara Fernandes Bessa, Nycolly Vitória de Oliveira, João Victor Tavares de Andrade
 Somente fórmulas fechadas (sem integração numérica). Unidades do SI.
 """
-
+import time
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
@@ -55,9 +55,11 @@ CASOS = {
 
 
 # estado e constantes
-estado = {"t": 0.0, "pausado": False, "ignorar_eventos": False, "n": 0}
+estado = {"t": 0.0, "pausado": False, "ignorar_eventos": False, "n": 0,
+          "pronto": False, "redesenhar": False, "ultimo": None}
 
-DT_ANIM = 0.03       # passo de tempo visual da animação [s]
+DT_MAX = 0.1         # maior avanço de tempo permitido entre dois quadros [s]
+VEL_ANIM = 0.7       # velocidade da animação (1 = tempo real; menor = câmera lenta)
 X1_0 = -4.0          # posição inicial do centro do bloco 1 [m]
 X2_0 = 0.0           # posição inicial do centro do bloco 2 [m]
 T_APOS_CHOQUE = 3.0  # tempo mostrado depois do choque antes de reiniciar [s]
@@ -132,6 +134,10 @@ H_ANIM = Y_TOPO - M_BAIXO - H_CTRL - H_GRAF - 2 * G
 H_LIVE = 1.05
 H_RES = Y_TOPO - M_BAIXO - H_CTRL - H_LIVE - 2 * G
 W_GRAF = (W_ESQ - G) / 2
+
+# largura aproximada do rótulo de velocidade, em metros do eixo x
+# (usada para reiniciar antes de o rótulo sair do gráfico)
+ROTULO_M = 0.95 * (XMAX - XMIN) / (W_ESQ - 0.60)
 
 # (x, y, largura, altura) de cada cartão
 y_ctrl = M_BAIXO
@@ -225,9 +231,9 @@ caixa_v = dict(fc=P["ceu_base"], ec="none", pad=1.5, alpha=0.75)
 txt_b1 = ax.text(0, 0, "", **kw_rotulo)
 txt_b2 = ax.text(0, 0, "", **kw_rotulo)
 txt_v1 = ax.text(0, 0, "", ha="right", va="bottom", fontsize=9.5,
-                 fontweight="bold", color=COR1, bbox=caixa_v, zorder=4)
+                 fontweight="bold", color=COR1, bbox=caixa_v, zorder=4, clip_on=True)
 txt_v2 = ax.text(0, 0, "", ha="left", va="bottom", fontsize=9.5,
-                 fontweight="bold", color=COR2, bbox=caixa_v, zorder=4)
+                 fontweight="bold", color=COR2, bbox=caixa_v, zorder=4, clip_on=True)
 
 # setas de velocidade (comprimento proporcional a v)
 seta1 = ax.annotate("", xy=(0, 0), xytext=(0, 0), zorder=4,
@@ -357,7 +363,8 @@ radio = RadioButtons(ax_radio, list(CASOS.keys()), active=0,
 for r in radio.labels:
     r.set_fontsize(10.5)
     r.set_color(COR_TEXTO)
-radio.set_radio_props({"edgecolor": COR_SUAVE, "linewidth": 1.5})
+radio.set_radio_props({"facecolor": COR_DESTAQUE, "edgecolor": COR_SUAVE,
+                       "linewidth": 1.5})
 
 
 # funções de atualização
@@ -577,12 +584,14 @@ def reiniciar(_=None):
     pintar_botao_pausa(False)
     atualizar_painel(*parametros())
     desenhar_blocos(0.0)
+    estado["redesenhar"] = True
     fig.canvas.draw_idle()
 
 
 def alternar_pausa(_=None):
     estado["pausado"] = not estado["pausado"]
     pintar_botao_pausa(estado["pausado"])
+    estado["redesenhar"] = True
     fig.canvas.draw_idle()
 
 
@@ -612,22 +621,39 @@ def ao_escolher_caso(label):
 
 def quadro(_):
     """Chamada pelo FuncAnimation a cada frame (só atualiza os blocos)."""
+    # tempo real decorrido desde o quadro anterior (limitado para não dar saltos)
+    agora = time.perf_counter()
+    passo = 0.0 if estado["ultimo"] is None else min(agora - estado["ultimo"], DT_MAX)
+    estado["ultimo"] = agora
     if not estado["pausado"]:
-        estado["t"] += DT_ANIM
+        estado["t"] += passo * VEL_ANIM
         m1, m2, v1, v2, _dt = parametros()
-        x1, x2, _a, _b = estado_cinematico(estado["t"], m1, m2, v1, v2)
+        x1, x2, vv1, vv2 = estado_cinematico(estado["t"], m1, m2, v1, v2)
         w1, w2 = largura(m1), largura(m2)
-        # reinicia ANTES de algum bloco encostar na borda do eixo
-        na_borda = (min(x1 - w1 / 2, x2 - w2 / 2) < XMIN + 0.1
-                    or max(x1 + w1 / 2, x2 + w2 / 2) > XMAX - 0.1)
+        # reinicia ANTES de algum bloco, rótulo ou seta encostar na borda do eixo
+        esquerda = min(x1 - w1 / 2, x1 - ROTULO_M, x1 + ESC_SETA * vv1,
+                       x2 - w2 / 2, x2 + ESC_SETA * vv2)
+        direita = max(x1 + w1 / 2, x1 + ESC_SETA * vv1,
+                      x2 + w2 / 2, x2 + ROTULO_M, x2 + ESC_SETA * vv2)
+        na_borda = esquerda < XMIN + 0.1 or direita > XMAX - 0.1
         if estado["t"] > tempo_total(m1, m2, v1, v2) or na_borda:
             estado["t"] = 0.0
+            estado["ultimo"] = None
+        estado["pronto"] = True
     estado["n"] += 1
     desenhar_blocos(estado["t"], atualizar_texto=(estado["n"] % 3 == 0))
     return (bloco1, bloco2, txt_b1, txt_b2, txt_v1, txt_v2,
             seta1, seta2, linha_choque, txt_choque, txt_status, txt_aviso)
 
-
+def redesenhar_animados(_evento):
+    """
+    O redesenho completo (feito ao mexer num controle) pula os elementos
+    animados; aqui um quadro da animação é desenhado logo em seguida
+    """
+    if estado["pronto"] and estado["redesenhar"]:
+        estado["redesenhar"] = False
+        estado["ultimo"] = None   # o quadro extra não avança o tempo
+        anim._step()
 
 # conexões e execução
 for s in (s_m1, s_m2, s_v1, s_v2, s_dt):
@@ -636,9 +662,10 @@ b_pause.on_clicked(alternar_pausa)
 b_reset.on_clicked(reiniciar)
 radio.on_clicked(ao_escolher_caso)
 fig.canvas.mpl_connect("key_press_event", ao_pressionar_tecla)
+fig.canvas.mpl_connect("draw_event", redesenhar_animados)
 
 ao_escolher_caso("Caso 1: m1 = m2")   # estado inicial
-anim = FuncAnimation(fig, quadro, interval=30, blit=True,
+anim = FuncAnimation(fig, quadro, interval=10, blit=True,
                      cache_frame_data=False)
 
 plt.show()
