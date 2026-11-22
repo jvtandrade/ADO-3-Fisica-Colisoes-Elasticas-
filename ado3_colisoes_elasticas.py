@@ -68,7 +68,6 @@ YMIN, YMAX = -0.9, 3.75   # limites visíveis do eixo y (chão em y < 0)
 ESC_SETA = 0.25      # comprimento da seta de velocidade [m por m/s]
 
 
-# tema visual (só estética): troque entre "escuro" e "claro"
 TEMA = "escuro"
 
 PALETAS = {
@@ -105,12 +104,12 @@ def largura(m):
     return 1.0 * m ** (1 / 3) + 0.45
 
 
-# interface: layout em grade, medido em polegadas (assim os espaços entre cartões e as margens internas ficam iguais)
-plt.rcParams["toolbar"] = "None"   # sem barra de ferramentas (ficava lá em baixo)
-LARG_FIG, ALT_FIG = 13.6, 6.6      # proporção parecida com a de telas de notebook
+
+plt.rcParams["toolbar"] = "None"   
+LARG_FIG, ALT_FIG = 13.6, 6.6     
 fig = plt.figure(figsize=(LARG_FIG, ALT_FIG), facecolor=COR_FUNDO)
 try:
-    fig.canvas.manager.set_window_title("ADO-3 · Colisões elásticas 1D")
+    fig.canvas.manager.set_window_title("ADO-3 · Colisões elásticas")
 except Exception:
     pass
 
@@ -120,14 +119,13 @@ def fr(x, y, w, h):
     return [x / LARG_FIG, y / ALT_FIG, w / LARG_FIG, h / ALT_FIG]
 
 
-# medidas da grade [polegadas]
-M_LAT, M_BAIXO = 0.25, 0.17     # margens laterais e inferior
-G = 0.14                        # espaço entre cartões (igual em todo lugar)
-ALT_TOPO = 0.42                 # faixa do título principal
-W_DIR = 3.50                    # largura da coluna da direita
+M_LAT, M_BAIXO = 0.25, 0.17     
+G = 0.14                        
+ALT_TOPO = 0.42                 
+W_DIR = 3.50                    
 W_ESQ = LARG_FIG - 2 * M_LAT - G - W_DIR
 X_ESQ, X_DIR = M_LAT, M_LAT + W_ESQ + G
-Y_TOPO = ALT_FIG - 0.07 - ALT_TOPO          # topo dos cartões
+Y_TOPO = ALT_FIG - 0.07 - ALT_TOPO          
 
 H_CTRL, H_GRAF = 1.42, 1.98
 H_ANIM = Y_TOPO - M_BAIXO - H_CTRL - H_GRAF - 2 * G
@@ -135,11 +133,10 @@ H_LIVE = 1.05
 H_RES = Y_TOPO - M_BAIXO - H_CTRL - H_LIVE - 2 * G
 W_GRAF = (W_ESQ - G) / 2
 
-# largura aproximada do rótulo de velocidade, em metros do eixo x
-# (usada para reiniciar antes de o rótulo sair do gráfico)
+
 ROTULO_M = 0.95 * (XMAX - XMIN) / (W_ESQ - 0.60)
 
-# (x, y, largura, altura) de cada cartão
+
 y_ctrl = M_BAIXO
 y_graf = y_ctrl + H_CTRL + G
 y_anim = y_graf + H_GRAF + G
@@ -155,7 +152,7 @@ CT_CASOS = (X_DIR, y_ctrl, W_DIR, H_CTRL)
 
 
 def cartao(caixa):
-    """Cartão de cantos arredondados, com sombra leve, atrás dos elementos."""
+    """Cartão com border radius e sombra no fundo."""
     x, y, w, h = [v for v in fr(*caixa)]
     estilo = dict(boxstyle=f"round,pad=0,rounding_size={0.12 / LARG_FIG}",
                   mutation_aspect=LARG_FIG / ALT_FIG, transform=fig.transFigure)
@@ -181,27 +178,24 @@ def rotulo_cartao(caixa, texto, cor):
 for ct in (CT_ANIM, CT_GP, CT_GK, CT_CTRL, CT_RES, CT_LIVE, CT_CASOS):
     cartao(ct)
 
-# faixa do título principal (dois quadradinhos = os dois blocos)
+
 y_titulo = (ALT_FIG - 0.07 - ALT_TOPO / 2) / ALT_FIG
 fig.text(M_LAT / LARG_FIG, y_titulo, "■", fontsize=17, color=COR1, va="center")
 fig.text((M_LAT + 0.26) / LARG_FIG, y_titulo, "■", fontsize=17, color=COR2,
          va="center")
-fig.text((M_LAT + 0.62) / LARG_FIG, y_titulo, "Colisões elásticas 1D",
+fig.text((M_LAT + 0.62) / LARG_FIG, y_titulo, "Colisões elásticas",
          fontsize=19, fontweight="bold", color=COR_TEXTO, va="center")
-fig.text((LARG_FIG - M_LAT) / LARG_FIG, y_titulo,
-         "ADO-3 · Colisões, Impulso e Conservação do Momento Linear · Pêndulo de Newton (Opção A)",
-         fontsize=10, color=COR_SUAVE, ha="right", va="center")
 
 rotulo_cartao(CT_ANIM, "SIMULAÇÃO", COR_DESTAQUE)
 rotulo_cartao(CT_RES, "RESULTADOS (SI)", "#34D399")
-rotulo_cartao(CT_LIVE, "AGORA (TEMPO REAL)", "#FBBF24")
+rotulo_cartao(CT_LIVE, "ATUALIZAÇÕES EM TEMPO REAL", "#FBBF24")
 rotulo_cartao(CT_CTRL, "CONTROLES", "#A78BFA")
 rotulo_cartao(CT_CASOS, "CASOS PRÉ-DEFINIDOS (v₂ = 0)", "#2DD4BF")
 
-# -- área da animação --
+
 ax = fig.add_axes(fr(CT_ANIM[0] + 0.30, CT_ANIM[1] + 0.50,
                      CT_ANIM[2] - 0.60, CT_ANIM[3] - 0.50 - 0.36))
-# céu em degradê (imagem estática de fundo)
+# fundo em degradê (imagem de fundo)
 topo, base = np.array(to_rgb(P["ceu_topo"])), np.array(to_rgb(P["ceu_base"]))
 grad = np.linspace(0, 1, 64).reshape(-1, 1, 1)
 ax.imshow(topo + (base - topo) * grad, extent=(XMIN, XMAX, YMIN, YMAX),
@@ -215,9 +209,9 @@ for lado in ("top", "right", "left"):
     ax.spines[lado].set_visible(False)
 ax.spines["bottom"].set_color(COR_BORDA)
 ax.add_patch(Rectangle((XMIN, YMIN), XMAX - XMIN, -YMIN, fc=P["chao"],
-                       ec="none", zorder=1))                         # chão
+                       ec="none", zorder=1))                       
 ax.axhline(0, color=P["linha_chao"], lw=1.8, zorder=2)
-for xg in range(-5, 16, 5):                                          # marcas
+for xg in range(-5, 16, 5):                                        
     ax.plot([xg, xg], [YMIN, 0], color=COR_GRADE, lw=1, zorder=2)
 
 bloco1 = Rectangle((0, 0), 1, 1, fc=COR1, ec=COR1_BORDA, lw=1.5, zorder=3)
@@ -243,7 +237,7 @@ seta2 = ax.annotate("", xy=(0, 0), xytext=(0, 0), zorder=4,
                     arrowprops=dict(arrowstyle="-|>", color=COR2, lw=2.2,
                                     mutation_scale=13, shrinkA=0, shrinkB=0))
 
-# marca do ponto de choque (a faixa do chão serve de "linha de status")
+
 Y_FAIXA = YMIN / 2
 linha_choque = ax.axvline(0, color=COR_SUAVE, ls="--", lw=1, visible=False,
                           zorder=2)
@@ -256,7 +250,6 @@ txt_aviso = ax.text(0.5, (Y_FAIXA - YMIN) / (YMAX - YMIN), "",
                     bbox=dict(boxstyle="round,pad=0.25", fc=P["aviso_fc"],
                               ec=P["aviso_ec"]))
 
-# painel de resultados (seções posicionadas em polegadas, a partir do topo)
 H_TXT = CT_RES[3] - 0.38 - 0.14
 ax_txt = fig.add_axes(fr(CT_RES[0] + 0.28, CT_RES[1] + 0.14, W_DIR - 0.56, H_TXT))
 ax_txt.axis("off")
@@ -279,36 +272,35 @@ def secao(topo_pol, titulo):
     return t, corpo
 
 
-T1, T2, T3, T4 = 0.0, 0.71, 1.255, 1.965     # topo de cada seção [pol]
+T1, T2, T3, T4 = 0.0, 0.71, 1.255, 1.965   
 t_cv, txt_cv = secao(T1, "CHOQUE E VELOCIDADES (s · m/s)")
 t_p, txt_p = secao(T2, "MOMENTO LINEAR (kg·m/s)")
 t_k, txt_k = secao(T3, "ENERGIA CINÉTICA (J)")
 t_j, txt_j = secao(T4, "IMPULSO (N·s) E FORÇA MÉDIA (N)")
-selo_p = ax_txt.text(0.92, yt(T2), "", **kw_selo)   # selo "✓ conservado"
-selo_k = ax_txt.text(0.69, yt(T3), "", **kw_selo)   # selo "✓ ΔK = 0"
+selo_p = ax_txt.text(0.92, yt(T2), "", **kw_selo)   
+selo_k = ax_txt.text(0.69, yt(T3), "", **kw_selo)  
 secoes_res = [t_cv, txt_cv, t_p, txt_p, selo_p, t_k, txt_k, selo_k, t_j, txt_j]
 
-# mensagem do caso sem colisão (R5), escondida enquanto há colisão
+# mensagem do caso sem colisão (R5), nao aparece enquanto há colisão
 txt_sem_t = ax_txt.text(0, yt(0), "SEM COLISÃO", va="top", ha="left",
                         fontsize=13, fontweight="bold", color=COR_ERRO,
                         visible=False)
 txt_sem = ax_txt.text(0, yt(0.42), "", visible=False, **kw_corpo)
 
-# estado ao vivo (muda a cada quadro; fica em eixo próprio por causa do blit)
 ax_status = fig.add_axes(fr(CT_LIVE[0] + 0.28, CT_LIVE[1] + 0.12,
                             W_DIR - 0.56, CT_LIVE[3] - 0.12 - 0.40))
 ax_status.axis("off")
 txt_status = ax_status.text(0, 1, "", va="top", ha="left", family="monospace",
                             fontsize=9, color=COR_TEXTO, linespacing=1.3)
 
-# gráficos de barras (empilhadas por bloco)
+# gráficos de barras
 ax_p = fig.add_axes(fr(CT_GP[0] + 0.55, CT_GP[1] + 0.47, W_GRAF - 0.55 - 0.25,
                        H_GRAF - 0.47 - 0.42))
 ax_k = fig.add_axes(fr(CT_GK[0] + 0.55, CT_GK[1] + 0.47, W_GRAF - 0.55 - 0.25,
                        H_GRAF - 0.47 - 0.42))
 
 
-# sliders (5 linhas, espaçamento fixo)
+# sliders 
 def criar_slider(linha, rotulo, vmin, vmax, vinit, passo, formato):
     y_centro = CT_CTRL[1] + CT_CTRL[3] - 0.47 - linha * 0.185
     eixo = fig.add_axes(fr(CT_CTRL[0] + 1.0, y_centro - 0.06, 3.6, 0.12),
@@ -324,7 +316,7 @@ def criar_slider(linha, rotulo, vmin, vmax, vinit, passo, formato):
     sl.label.set_color(COR_TEXTO)
     sl.valtext.set_fontsize(10)
     sl.valtext.set_color(COR_TEXTO)
-    sl.valtext.set_x(1.05)   # afasta o número da bolinha no valor máximo
+    sl.valtext.set_x(1.05)   
     return sl
 
 
@@ -334,7 +326,7 @@ s_v1 = criar_slider(2, r"$v_1$ [m/s]", -10.0, 10.0, 4.0, 0.1, "%.1f")
 s_v2 = criar_slider(3, r"$v_2$ [m/s]", -10.0, 10.0, 0.0, 0.1, "%.1f")
 s_dt = criar_slider(4, r"$\Delta t$ [ms]", 1.0, 100.0, 10.0, 1.0, "%d")
 
-# botões (lado a lado)
+# botões
 y_bot = CT_CTRL[1] + 0.54
 ax_pause = fig.add_axes(fr(CT_CTRL[0] + 5.75, y_bot, 1.65, 0.42))
 ax_reset = fig.add_axes(fr(CT_CTRL[0] + 7.60, y_bot, 1.65, 0.42))
@@ -363,11 +355,11 @@ radio = RadioButtons(ax_radio, list(CASOS.keys()), active=0,
 for r in radio.labels:
     r.set_fontsize(10.5)
     r.set_color(COR_TEXTO)
-radio.set_radio_props({"facecolor": COR_DESTAQUE, "edgecolor": COR_SUAVE,
-                       "linewidth": 1.5})
+
+radio.set_radio_props({"edgecolor": COR_SUAVE, "linewidth": 1.5, "facecolor": COR_DESTAQUE})
 
 
-# funções de atualização
+
 def parametros():
     """Lê os valores atuais dos sliders (Δt convertido para segundos)."""
     return (s_m1.val, s_m2.val, s_v1.val, s_v2.val, s_dt.val / 1000.0)
@@ -410,7 +402,7 @@ def empilhar(eixo, antes, depois, titulo, mostrar_total_linha):
                 fundo_b += valor
         y_max, y_min = max(y_max, topo_b), min(y_min, fundo_b)
         total = a + b
-        if mostrar_total_linha:  # linha tracejada = total (soma dos blocos)
+        if mostrar_total_linha:
             eixo.plot([pos - 0.33, pos + 0.33], [total, total], "--",
                       color=COR_TEXTO, lw=1.4)
         eixo.text(pos, max(topo_b, 0), f"{total:.2f}", ha="center",
@@ -418,7 +410,6 @@ def empilhar(eixo, antes, depois, titulo, mostrar_total_linha):
     eixo.axhline(0, color=COR_SUAVE, lw=0.8)
     eixo.set_xticks([0, 1])
     eixo.set_xticklabels(["antes da\ncolisão", "depois da\ncolisão"], fontsize=8.5)
-    # título à esquerda e legenda à direita, na mesma faixa acima do gráfico
     eixo.set_title(titulo, loc="left", fontsize=10, fontweight="bold",
                    color=COR_TEXTO, pad=10)
     folga = 0.25 * ((y_max - y_min) or 1.0)   # espaço para o número
@@ -467,7 +458,7 @@ def atualizar_painel(m1, m2, v1, v2, dt):
     J1, J2, Fmed = impulsos(m1, m2, v1, v2, u1, u2, dt)
     tc = tc_atual(m1, m2, v1, v2)
 
-    # verificações (tolerância numérica de ponto flutuante)
+    # verificações 
     ok_p = abs(p_d - p_a) < 1e-9
     ok_k = abs(k_d - k_a) < 1e-9
     dK = round(k_d - k_a, 9) + 0.0  # evita "-0.000"
@@ -522,8 +513,8 @@ def desenhar_seta(seta, x, y, v):
         seta.set_visible(False)
         return
     seta.set_visible(True)
-    seta.xy = (x + ESC_SETA * v, y)   # ponta da seta
-    seta.set_position((x, y))         # início da seta
+    seta.xy = (x + ESC_SETA * v, y)   
+    seta.set_position((x, y))        
 
 
 def desenhar_blocos(t, atualizar_texto=True):
@@ -543,21 +534,20 @@ def desenhar_blocos(t, atualizar_texto=True):
 
     tc = tc_atual(m1, m2, v1, v2)
 
-    # painel ao vivo: p(t) e K(t) no instante atual
+  
     if tc is None:
         fase = "sem colisão"
     else:
         fase = "depois do choque" if t >= tc else "antes do choque"
-    if atualizar_texto:   # texto mais pesado de desenhar: não precisa de todo quadro
+    if atualizar_texto:  
         txt_status.set_text(
             f"t = {t:.2f} s  ({fase})\n"
             f"p(t) = {momento(m1, vv1, m2, vv2):.3f} kg·m/s\n"
             f"K(t) = {cinetica(m1, vv1, m2, vv2):.3f} J"
         )
 
-    # marca do choque: aparece quando t >= tc
     if tc is not None and t >= tc:
-        x_ch = X1_0 + v1 * tc + w1 / 2  # ponto de contato
+        x_ch = X1_0 + v1 * tc + w1 / 2  
         linha_choque.set_xdata([x_ch, x_ch])
         linha_choque.set_visible(True)
         txt_choque.set_position((x_ch + 0.2, Y_FAIXA))
